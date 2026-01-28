@@ -1,6 +1,6 @@
 # SyncTask
 
-A modern task management application with team collaboration features, built with React and TypeScript.
+A modern task management application with team collaboration features, built with React, TypeScript, and Supabase.
 
 ## What is SyncTask?
 
@@ -14,20 +14,75 @@ SyncTask is a Kanban-styled task management board designed for teams to organize
 4. **Dark Theme**: Eye-friendly dark mode throughout the application
 5. **User Profile**: Quick access to user details with logout functionality
 6. **Responsive Design**: Works seamlessly on different screen sizes
+7. **Authentication**: Secure login with Email/Password or Google OAuth
+8. **Role-Based Access**: Admin and Member roles with different permissions
+9. **Real-time Updates**: Tasks sync in real-time across multiple users
 
-## Why Use SyncTask?
+## Tech Stack
 
-- **Improved Collaboration**: See what each team member is working on
-- **Better Planning**: Track team availability and plan around leaves
-- **Clear Organization**: Visualize project progress at a glance
-- **Intuitive Interface**: Simple and clean design for easy adoption
+- **Frontend**: React 19 + TypeScript + Vite
+- **Styling**: Tailwind CSS + shadcn/ui
+- **Backend**: Supabase (PostgreSQL + Auth + Real-time)
+- **Icons**: Lucide React
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 18+ and pnpm
+- A Supabase account (free tier available)
+
+### 1. Clone and Install
+
+```bash
+git clone <your-repo-url>
+cd SyncTask
+pnpm install
+```
+
+### 2. Set Up Supabase
+
+1. Create a new project at [supabase.com](https://supabase.com)
+2. Go to **SQL Editor** and run the migration script:
+    - Copy contents of `supabase/migrations/001_initial_schema.sql`
+    - Paste and run in the SQL Editor
+3. Configure Google OAuth (optional):
+    - Go to **Authentication > Providers > Google**
+    - Add your Google OAuth credentials
+4. Get your API keys:
+    - Go to **Settings > API**
+    - Copy `Project URL` and `anon` public key
+
+### 3. Configure Environment
+
+Create `.env.local` in the project root:
+
+```env
+VITE_SUPABASE_URL=https://your-project-id.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key-here
+```
+
+### 4. Run the App
+
+```bash
+pnpm dev
+```
+
+Open [http://localhost:5173](http://localhost:5173)
+
+### 5. Create Admin User
+
+1. Sign up with your email
+2. Go to Supabase **Table Editor > profiles**
+3. Update your user's `role` from `member` to `admin`
 
 ## How to Use
 
 ### Managing Tasks
 
-- **Move Tasks**: Click the arrow buttons on task cards to move tasks to next columns
-- **Delete Tasks**: Click the delete button to remove a task
+- **Create Task**: Enter task description, select deadline and team members, click "Add Task"
+- **Move Tasks**: Click the arrow buttons on task cards to move between columns
+- **Delete Tasks**: Click the trash icon to remove a task
 
 ### Filtering by Team Member
 
@@ -38,19 +93,48 @@ SyncTask is a Kanban-styled task management board designed for teams to organize
 ### Marking Leaves
 
 - Navigate to the calendar in the left sidebar
-- Click on any date to mark team member leaves
-- Select the people who are on leave for that date
+- Click on any date to open the leave management modal
+- Check/uncheck team members who are on leave for that date
 - Click "Save" to confirm
 
-### User Profile
+### Admin Features
 
-- Click the circle avatar in the top-right corner
-- View your profile details
-- Click "Log out" to logout
+Admins can access additional features from the user profile modal:
 
-## Technologies Used
+- **Team Management**: Add, edit, or remove team members
+- **User Management**: Promote users to admin or demote to member
 
-- React + TypeScript
-- Vite (build tool)
-- Tailwind CSS (styling)
-- Lucide React (icons)
+## Project Structure
+
+```
+src/
+├── components/
+│   ├── admin/           # Admin-only pages
+│   ├── auth/            # Authentication pages
+│   ├── ui/              # shadcn/ui components
+│   ├── date-picker.tsx  # Calendar components
+│   ├── kanban-board.tsx # Main task board
+│   ├── sidebar-left.tsx # Navigation sidebar
+│   └── ...
+├── contexts/
+│   └── AuthContext.tsx  # Authentication state
+├── lib/
+│   ├── database.ts      # Supabase queries
+│   ├── supabase.ts      # Supabase client
+│   └── utils.ts         # Utility functions
+├── types/
+│   └── database.types.ts # TypeScript types
+└── App.tsx              # Main app with routing
+```
+
+## Database Schema
+
+- **profiles**: User profiles linked to Supabase Auth
+- **team_members**: Team member information
+- **tasks**: Task data with status and deadline
+- **task_assignees**: Many-to-many task/member relationships
+- **leaves**: Leave dates for team members
+
+## License
+
+MIT License
