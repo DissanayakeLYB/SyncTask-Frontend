@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
-import { X, Loader2, Check } from "lucide-react";
+import { X, Loader2, Calendar } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
 	getTeamMembers,
@@ -59,7 +59,29 @@ export function LeaveManagementModal({
 		loadData();
 	}, [dateString]);
 
+	// Get the team member ID that belongs to the current user
+	// Since team members are now derived from profiles, user.id === team_member.id
+	const currentUserTeamMemberId = user?.id;
+
+	// Get the team member object for current user
+	const currentUserTeamMember = teamMembers.find(
+		(member) => member.id === user?.id,
+	);
+
+	// Get leaves for other team members (not the current user)
+	const othersOnLeave = existingLeaves.filter(
+		(leave) => leave.team_member_id !== currentUserTeamMemberId,
+	);
+
+	// Check if a member can be edited by the current user (everyone can only edit their own)
+	const canEditMember = (memberId: string) => {
+		return memberId === currentUserTeamMemberId;
+	};
+
 	const toggleMember = (memberId: string) => {
+		// Only allow toggling if user can edit this member
+		if (!canEditMember(memberId)) return;
+
 		setSelectedMembers((prev) => {
 			const newSet = new Set(prev);
 			if (newSet.has(memberId)) {
@@ -82,14 +104,14 @@ export function LeaveManagementModal({
 				existingLeaves.map((l) => l.team_member_id),
 			);
 
-			// Members to add (selected but not existing)
+			// Members to add (selected but not existing) - only those the user can edit
 			const membersToAdd = [...selectedMembers].filter(
-				(id) => !existingMemberIds.has(id),
+				(id) => !existingMemberIds.has(id) && canEditMember(id),
 			);
 
-			// Members to remove (existing but not selected)
+			// Members to remove (existing but not selected) - only those the user can edit
 			const membersToRemove = [...existingMemberIds].filter(
-				(id) => !selectedMembers.has(id),
+				(id) => !selectedMembers.has(id) && canEditMember(id),
 			);
 
 			// Add new leaves
@@ -119,10 +141,10 @@ export function LeaveManagementModal({
 				<div className="flex items-center justify-between mb-4">
 					<div>
 						<h3 className="text-xl font-bold text-slate-100">
-							Manage Leave
+							Request Leave
 						</h3>
 						<p className="text-sm text-slate-400">
-							{format(date, "EEEE, MMMM d, yyyy")}
+							{format(date, "EEEE, dd/MM/yyyy")}
 						</p>
 					</div>
 					<button
@@ -146,38 +168,90 @@ export function LeaveManagementModal({
 						<Loader2 className="h-8 w-8 animate-spin text-blue-500" />
 					</div>
 				) : (
-					<div className="space-y-2 max-h-80 overflow-y-auto">
-						<p className="text-sm text-slate-400 mb-3">
-							Select team members who are on leave:
-						</p>
-						{teamMembers.map((member) => (
-							<label
-								key={member.id}
-								className="flex items-center gap-3 p-3 rounded-md hover:bg-slate-700 cursor-pointer transition-colors"
-							>
-								<div
-									className={`h-5 w-5 rounded border-2 flex items-center justify-center transition-colors ${
-										selectedMembers.has(member.id)
-											? "bg-blue-600 border-blue-600"
-											: "border-slate-500"
-									}`}
-								>
-									{selectedMembers.has(member.id) && (
-										<Check className="h-3 w-3 text-white" />
-									)}
+					/* All users can only toggle own leave, see others read-only */
+					<div className="space-y-4">
+						{/* Your Leave Section */}
+						{currentUserTeamMember && (
+							<div className="bg-slate-700/50 rounded-lg p-4">
+								<p className="text-sm font-medium text-slate-300 mb-3">
+									Your Leave Status
+								</p>
+								<label className="flex items-center gap-4 cursor-pointer">
+									<div
+										className={`relative w-12 h-6 rounded-full transition-colors ${
+											selectedMembers.has(
+												currentUserTeamMemberId!,
+											)
+												? "bg-blue-600"
+												: "bg-slate-600"
+										}`}
+									>
+										<div
+											className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${
+												selectedMembers.has(
+													currentUserTeamMemberId!,
+												)
+													? "translate-x-6"
+													: ""
+											}`}
+										/>
+									</div>
+									<input
+										type="checkbox"
+										checked={selectedMembers.has(
+											currentUserTeamMemberId!,
+										)}
+										onChange={() =>
+											toggleMember(
+												currentUserTeamMemberId!,
+											)
+										}
+										className="sr-only"
+									/>
+									<div className="flex items-center gap-2">
+										<span className="text-xl">
+											{currentUserTeamMember.emoji}
+										</span>
+										<span className="text-slate-100">
+											{selectedMembers.has(
+												currentUserTeamMemberId!,
+											)
+												? "On Leave"
+												: "Working"}
+										</span>
+									</div>
+								</label>
+							</div>
+						)}
+
+						{/* Others on Leave Section */}
+						<div>
+							<p className="text-sm font-medium text-slate-300 mb-2 flex items-center gap-2">
+								<Calendar className="h-4 w-4" />
+								Others on Leave
+							</p>
+							{othersOnLeave.length > 0 ? (
+								<div className="space-y-2">
+									{othersOnLeave.map((leave) => (
+										<div
+											key={leave.id}
+											className="flex items-center gap-3 p-2 rounded-md bg-slate-700/30"
+										>
+											<span className="text-xl">
+												{leave.team_member.emoji}
+											</span>
+											<span className="text-slate-300">
+												{leave.team_member.name}
+											</span>
+										</div>
+									))}
 								</div>
-								<input
-									type="checkbox"
-									checked={selectedMembers.has(member.id)}
-									onChange={() => toggleMember(member.id)}
-									className="sr-only"
-								/>
-								<span className="text-xl">{member.emoji}</span>
-								<span className="text-slate-100">
-									{member.name}
-								</span>
-							</label>
-						))}
+							) : (
+								<p className="text-sm text-slate-500 italic p-2">
+									No other team members on leave this day
+								</p>
+							)}
+						</div>
 					</div>
 				)}
 
@@ -198,7 +272,7 @@ export function LeaveManagementModal({
 						{isSaving && (
 							<Loader2 className="h-4 w-4 animate-spin" />
 						)}
-						Save
+						Confirm
 					</button>
 				</div>
 			</div>

@@ -7,10 +7,10 @@ import {
 	SidebarTrigger,
 } from "@/components/ui/sidebar";
 import KanbanBoard from "./components/kanban-board";
-import { LogOut, Users, UserCog, Settings, Key } from "lucide-react";
+import { LogOut, UserCog, Settings, Key } from "lucide-react";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { LoginPage, ProtectedRoute } from "@/components/auth";
-import { TeamManagement, UserManagement } from "@/components/admin";
+import { UserManagement } from "@/components/admin";
 import { supabase } from "@/lib/supabase";
 
 // Dashboard layout component
@@ -198,24 +198,14 @@ function DashboardLayout() {
 									<Settings className="h-3 w-3" />
 									Admin
 								</p>
-								<div className="flex gap-2">
-									<Link
-										to="/admin/team"
-										onClick={closeModal}
-										className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-100 rounded-md transition text-sm"
-									>
-										<Users className="h-4 w-4" />
-										Team
-									</Link>
-									<Link
-										to="/admin/users"
-										onClick={closeModal}
-										className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-100 rounded-md transition text-sm"
-									>
-										<UserCog className="h-4 w-4" />
-										Users
-									</Link>
-								</div>
+								<Link
+									to="/admin/users"
+									onClick={closeModal}
+									className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-100 rounded-md transition text-sm"
+								>
+									<UserCog className="h-4 w-4" />
+									User Management
+								</Link>
 							</div>
 						)}
 
@@ -251,14 +241,6 @@ export function App() {
 					element={
 						<ProtectedRoute>
 							<DashboardLayout />
-						</ProtectedRoute>
-					}
-				/>
-				<Route
-					path="/admin/team"
-					element={
-						<ProtectedRoute requireAdmin>
-							<TeamManagement />
 						</ProtectedRoute>
 					}
 				/>

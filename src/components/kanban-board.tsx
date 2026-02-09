@@ -37,7 +37,7 @@ export default function KanbanBoard({
 }: {
 	selectedPerson: string | null;
 }) {
-	const { user } = useAuth();
+	const { user, isAdmin } = useAuth();
 	const [tasks, setTasks] = useState<TaskWithAssignees[]>([]);
 	const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
 	const [leaves, setLeaves] = useState<LeaveWithMember[]>([]);
@@ -96,6 +96,14 @@ export default function KanbanBoard({
 	async function addTask() {
 		if (!taskInput) {
 			alert("Please enter a task description.");
+			return;
+		}
+		if (!deadlineInput) {
+			alert("Please set a deadline for this task.");
+			return;
+		}
+		if (selectedMemberIds.length === 0) {
+			alert("Please assign at least one person to this task.");
 			return;
 		}
 		if (!user) {
@@ -238,7 +246,11 @@ export default function KanbanBoard({
 	const formatDeadline = (deadline: string | null): string => {
 		if (!deadline) return "Not specified";
 		try {
-			return new Date(deadline).toLocaleDateString();
+			const date = new Date(deadline);
+			const day = date.getDate().toString().padStart(2, "0");
+			const month = (date.getMonth() + 1).toString().padStart(2, "0");
+			const year = date.getFullYear();
+			return `${day}/${month}/${year}`;
 		} catch {
 			return "Not specified";
 		}
@@ -259,15 +271,17 @@ export default function KanbanBoard({
 					>
 						<div className="flex justify-between items-center mb-2">
 							<h4 className="font-semibold">{task.title}</h4>
-							<div className="flex gap-2">
-								<button
-									onClick={() => openDeleteModal(task)}
-									className="cursor-pointer text-red-500 hover:text-red-700 transition"
-									title="Delete task"
-								>
-									<Trash2 size={16} strokeWidth={2} />
-								</button>
-							</div>
+							{isAdmin && (
+								<div className="flex gap-2">
+									<button
+										onClick={() => openDeleteModal(task)}
+										className="cursor-pointer text-red-500 hover:text-red-700 transition"
+										title="Delete task"
+									>
+										<Trash2 size={16} strokeWidth={2} />
+									</button>
+								</div>
+							)}
 						</div>
 						<p className="text-sm text-slate-300 mb-2">
 							Deadline: {formatDeadline(task.deadline)}
@@ -284,32 +298,34 @@ export default function KanbanBoard({
 								))}
 							</div>
 						)}
-						<div className="flex gap-2 justify-between">
-							{prevLevel && (
-								<button
-									onClick={() =>
-										openMoveModal(task, prevLevel)
-									}
-									className="flex items-center gap-1 text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded transition text-slate-200"
-									title={`Move to ${prevLevel}`}
-								>
-									<ChevronLeft size={14} />
-									{prevLevel}
-								</button>
-							)}
-							{nextLevel && (
-								<button
-									onClick={() =>
-										openMoveModal(task, nextLevel)
-									}
-									className="flex items-center gap-1 text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded transition ml-auto text-slate-200"
-									title={`Move to ${nextLevel}`}
-								>
-									{nextLevel}
-									<ChevronRight size={14} />
-								</button>
-							)}
-						</div>
+						{isAdmin && (
+							<div className="flex gap-2 justify-between">
+								{prevLevel && (
+									<button
+										onClick={() =>
+											openMoveModal(task, prevLevel)
+										}
+										className="flex items-center gap-1 text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded transition text-slate-200"
+										title={`Move to ${prevLevel}`}
+									>
+										<ChevronLeft size={14} />
+										{prevLevel}
+									</button>
+								)}
+								{nextLevel && (
+									<button
+										onClick={() =>
+											openMoveModal(task, nextLevel)
+										}
+										className="flex items-center gap-1 text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded transition ml-auto text-slate-200"
+										title={`Move to ${nextLevel}`}
+									>
+										{nextLevel}
+										<ChevronRight size={14} />
+									</button>
+								)}
+							</div>
+						)}
 					</div>
 				);
 			});
@@ -323,69 +339,74 @@ export default function KanbanBoard({
 				</div>
 			)}
 			<div className="flex flex-col gap-4 mb-8 px-8 pt-4">
-				<div className="flex flex-col gap-3 mb-4">
-					<div className="flex flex-col md:flex-row gap-4">
-						<input
-							type="text"
-							placeholder="Enter the task..."
-							value={taskInput}
-							onChange={(e) => setTaskInput(e.target.value)}
-							className="border border-slate-600 bg-slate-800 text-white placeholder-slate-400 p-2 w-full rounded-md focus:outline-none focus:border-blue-500"
-						/>
-						<input
-							type="date"
-							name="deadline"
-							id="deadline"
-							value={deadlineInput}
-							onChange={(e) => setDeadlineInput(e.target.value)}
-							className="border border-slate-600 bg-slate-800 text-white p-2 rounded-md focus:outline-none focus:border-blue-500"
-						/>
+				{isAdmin && (
+					<div className="flex flex-col gap-3 mb-4">
+						<div className="flex flex-col md:flex-row gap-4">
+							<input
+								type="text"
+								placeholder="Enter the task..."
+								value={taskInput}
+								onChange={(e) => setTaskInput(e.target.value)}
+								className="border border-slate-600 bg-slate-800 text-white placeholder-slate-400 p-2 w-full rounded-md focus:outline-none focus:border-blue-500"
+							/>
+							<input
+								type="date"
+								name="deadline"
+								id="deadline"
+								value={deadlineInput}
+								onChange={(e) =>
+									setDeadlineInput(e.target.value)
+								}
+								className="border border-slate-600 bg-slate-800 text-white p-2 rounded-md focus:outline-none focus:border-blue-500"
+							/>
+						</div>
+						<div className="flex flex-wrap gap-2">
+							{teamMembers.map((member) => {
+								const active = selectedMemberIds.includes(
+									member.id,
+								);
+								const memberLeaves = getPersonLeaveInfo(
+									member.first_name,
+								);
+								const hasUpcomingLeave =
+									memberLeaves.length > 0;
+								return (
+									<button
+										key={member.id}
+										type="button"
+										onClick={() => toggleMember(member.id)}
+										className={`px-3 py-1 text-sm rounded-full border transition flex items-center gap-1 ${
+											active
+												? "bg-blue-600 border-blue-500 text-white"
+												: "bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600"
+										}`}
+										title={
+											hasUpcomingLeave
+												? `${member.first_name} - On leave`
+												: `Tag ${member.first_name}`
+										}
+									>
+										{member.emoji} {member.first_name}
+										{hasUpcomingLeave && (
+											<Calendar
+												size={12}
+												className="text-yellow-400"
+											/>
+										)}
+									</button>
+								);
+							})}
+						</div>
+						<div>
+							<input
+								type="button"
+								className="py-2 px-4 rounded-lg font-semibold text-lg text-white bg-blue-600 hover:bg-blue-700 cursor-pointer shadow-md transition"
+								value="Add Task"
+								onClick={addTask}
+							/>
+						</div>
 					</div>
-					<div className="flex flex-wrap gap-2">
-						{teamMembers.map((member) => {
-							const active = selectedMemberIds.includes(
-								member.id,
-							);
-							const memberLeaves = getPersonLeaveInfo(
-								member.first_name,
-							);
-							const hasUpcomingLeave = memberLeaves.length > 0;
-							return (
-								<button
-									key={member.id}
-									type="button"
-									onClick={() => toggleMember(member.id)}
-									className={`px-3 py-1 text-sm rounded-full border transition flex items-center gap-1 ${
-										active
-											? "bg-blue-600 border-blue-500 text-white"
-											: "bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600"
-									}`}
-									title={
-										hasUpcomingLeave
-											? `${member.first_name} - On leave`
-											: `Tag ${member.first_name}`
-									}
-								>
-									{member.emoji} {member.first_name}
-									{hasUpcomingLeave && (
-										<Calendar
-											size={12}
-											className="text-yellow-400"
-										/>
-									)}
-								</button>
-							);
-						})}
-					</div>
-					<div>
-						<input
-							type="button"
-							className="py-2 px-4 rounded-lg font-semibold text-lg text-white bg-blue-600 hover:bg-blue-700 cursor-pointer shadow-md transition"
-							value="Add Task"
-							onClick={addTask}
-						/>
-					</div>
-				</div>
+				)}
 				<div className="grid grid-cols-1 md:grid-cols-3 gap-10 justify-evenly">
 					<div className="rounded-b-xl">
 						<div className="p-4 bg-red-600 rounded-xl text-white">

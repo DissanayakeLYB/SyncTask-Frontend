@@ -43,16 +43,20 @@ export function DatePicker({
 		}
 	};
 
-	// Modifier for dates that have leaves
+	// Modifier for dates that have leaves - compare by date string to avoid timezone issues
 	const leaveModifier = {
-		leave: leaveDates,
+		leave: (date: Date) => {
+			return leaveDates.some(
+				(leaveDate) =>
+					leaveDate.getFullYear() === date.getFullYear() &&
+					leaveDate.getMonth() === date.getMonth() &&
+					leaveDate.getDate() === date.getDate(),
+			);
+		},
 	};
 
-	const modifiersStyles = {
-		leave: {
-			backgroundColor: "rgb(239 68 68 / 0.2)",
-			borderRadius: "4px",
-		},
+	const modifiersClassNames = {
+		leave: "[&>button]:bg-red-500/30 [&>button]:text-red-400 [&>button]:font-bold",
 	};
 
 	return (
@@ -68,7 +72,7 @@ export function DatePicker({
 				>
 					<CalendarIcon className="mr-2 h-4 w-4" />
 					{selectedDate ? (
-						format(selectedDate, "PPP")
+						format(selectedDate, "dd/MM/yyyy")
 					) : (
 						<span>{placeholder}</span>
 					)}
@@ -80,7 +84,7 @@ export function DatePicker({
 					selected={selectedDate}
 					onSelect={handleSelect}
 					modifiers={leaveModifier}
-					modifiersStyles={modifiersStyles}
+					modifiersClassNames={modifiersClassNames}
 					initialFocus
 				/>
 			</PopoverContent>
@@ -108,16 +112,20 @@ export function DatePickerInline({
 		}
 	};
 
-	// Modifier for dates that have leaves
+	// Modifier for dates that have leaves - compare by date string to avoid timezone issues
 	const leaveModifier = {
-		leave: leaveDates,
+		leave: (date: Date) => {
+			return leaveDates.some(
+				(leaveDate) =>
+					leaveDate.getFullYear() === date.getFullYear() &&
+					leaveDate.getMonth() === date.getMonth() &&
+					leaveDate.getDate() === date.getDate(),
+			);
+		},
 	};
 
-	const modifiersStyles = {
-		leave: {
-			backgroundColor: "rgb(239 68 68 / 0.2)",
-			borderRadius: "4px",
-		},
+	const modifiersClassNames = {
+		leave: "[&>button]:bg-red-500/30 [&>button]:text-red-400 [&>button]:font-bold",
 	};
 
 	return (
@@ -126,7 +134,7 @@ export function DatePickerInline({
 			selected={selectedDate}
 			onSelect={handleSelect}
 			modifiers={leaveModifier}
-			modifiersStyles={modifiersStyles}
+			modifiersClassNames={modifiersClassNames}
 			className={cn(
 				"rounded-md border w-full max-w-full [--cell-size:28px] p-2",
 				"[&_.rdp-month]:w-full [&_.rdp-table]:w-full",

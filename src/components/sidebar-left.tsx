@@ -1,5 +1,6 @@
 import * as React from "react";
 import { useState, useEffect } from "react";
+import { parseISO } from "date-fns";
 
 import { NavLecturers } from "@/components/nav-lecturers";
 import { DatePickerInline } from "@/components/date-picker";
@@ -44,7 +45,8 @@ export function SidebarLeft({
 	}
 
 	// Convert leaves to Date objects for the calendar
-	const leaveDates = leaves.map((leave) => new Date(leave.leave_date));
+	// Use parseISO to correctly parse dates without timezone issues
+	const leaveDates = leaves.map((leave) => parseISO(leave.leave_date));
 
 	// Map team members to the format expected by NavLecturers
 	const lecturers = teamMembers.map((member) => ({

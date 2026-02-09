@@ -77,73 +77,34 @@ export async function getAllProfiles(): Promise<Profile[]> {
 }
 
 // ============================================
-// Team Member Operations
+// Team Member Operations (using Profiles as Team Members)
 // ============================================
+
+// Helper to convert Profile to TeamMember format
+function profileToTeamMember(profile: Profile): TeamMember {
+	const nameParts = profile.full_name.split(" ");
+	return {
+		id: profile.id,
+		name: profile.full_name,
+		first_name: nameParts[0] || profile.full_name,
+		emoji: profile.emoji,
+		user_id: profile.id, // Profile IS the user
+		is_active: true,
+		created_at: profile.created_at,
+	};
+}
 
 export async function getTeamMembers(): Promise<TeamMember[]> {
 	const { data, error } = await supabase
-		.from("team_members")
+		.from("profiles")
 		.select("*")
-		.eq("is_active", true)
-		.order("name", { ascending: true });
+		.order("full_name", { ascending: true });
 
 	if (error) {
 		console.error("Error fetching team members:", error);
 		return [];
 	}
-	return data || [];
-}
-
-export async function createTeamMember(
-	member: Pick<TeamMember, "name" | "first_name" | "emoji">,
-): Promise<TeamMember | null> {
-	const { data, error } = await supabase
-		.from("team_members")
-		.insert(member)
-		.select()
-		.single();
-
-	if (error) {
-		console.error("Error creating team member:", error);
-		return null;
-	}
-	return data;
-}
-
-export async function updateTeamMember(
-	memberId: string,
-	updates: Partial<
-		Pick<
-			TeamMember,
-			"name" | "first_name" | "emoji" | "is_active" | "user_id"
-		>
-	>,
-): Promise<TeamMember | null> {
-	const { data, error } = await supabase
-		.from("team_members")
-		.update(updates)
-		.eq("id", memberId)
-		.select()
-		.single();
-
-	if (error) {
-		console.error("Error updating team member:", error);
-		return null;
-	}
-	return data;
-}
-
-export async function deleteTeamMember(memberId: string): Promise<boolean> {
-	const { error } = await supabase
-		.from("team_members")
-		.delete()
-		.eq("id", memberId);
-
-	if (error) {
-		console.error("Error deleting team member:", error);
-		return false;
-	}
-	return true;
+	return (data || []).map(profileToTeamMember);
 }
 
 // ============================================
@@ -168,12 +129,7 @@ export async function getTasks(): Promise<TaskWithAssignees[]> {
 	// Fetch assignees for all tasks
 	const { data: assignees, error: assigneesError } = await supabase
 		.from("task_assignees")
-		.select(
-			`
-      task_id,
-      team_member:team_members(*)
-    `,
-		)
+		.select("task_id, team_member_id")
 		.in(
 			"task_id",
 			tasks.map((t) => t.id),
@@ -185,16 +141,32 @@ export async function getTasks(): Promise<TaskWithAssignees[]> {
 		return tasks.map((task) => ({ ...task, assignees: [] }));
 	}
 
+	// Get unique profile IDs from assignees
+	const profileIds = [
+		...new Set((assignees || []).map((a) => a.team_member_id)),
+	];
+
+	// Fetch profiles for all assignees
+	const { data: profiles } = await supabase
+		.from("profiles")
+		.select("*")
+		.in("id", profileIds);
+
+	const profileMap = new Map<string, Profile>();
+	for (const profile of profiles || []) {
+		profileMap.set(profile.id, profile);
+	}
+
 	// Map assignees to tasks
 	const assigneeMap = new Map<string, TeamMember[]>();
 	for (const entry of assignees || []) {
 		const taskId = entry.task_id;
-		const member = entry.team_member as unknown as TeamMember;
-		if (member) {
+		const profile = profileMap.get(entry.team_member_id);
+		if (profile) {
 			if (!assigneeMap.has(taskId)) {
 				assigneeMap.set(taskId, []);
 			}
-			assigneeMap.get(taskId)!.push(member);
+			assigneeMap.get(taskId)!.push(profileToTeamMember(profile));
 		}
 	}
 
@@ -257,15 +229,15 @@ export async function createTask(
 		}
 	}
 
-	// Fetch the complete task with assignees
-	const { data: teamMembers } = await supabase
-		.from("team_members")
+	// Fetch the complete task with assignees (from profiles)
+	const { data: profiles } = await supabase
+		.from("profiles")
 		.select("*")
 		.in("id", assigneeIds);
 
 	return {
 		...newTask,
-		assignees: teamMembers || [],
+		assignees: (profiles || []).map(profileToTeamMember),
 	};
 }
 
@@ -359,12 +331,7 @@ export async function deleteTask(taskId: string): Promise<boolean> {
 export async function getLeaves(): Promise<LeaveWithMember[]> {
 	const { data, error } = await supabase
 		.from("leaves")
-		.select(
-			`
-      *,
-      team_member:team_members(*)
-    `,
-		)
+		.select("*")
 		.order("leave_date", { ascending: true });
 
 	if (error) {
@@ -372,10 +339,30 @@ export async function getLeaves(): Promise<LeaveWithMember[]> {
 		return [];
 	}
 
-	return (data || []).map((leave) => ({
-		...leave,
-		team_member: leave.team_member as unknown as TeamMember,
-	}));
+	if (!data || data.length === 0) {
+		return [];
+	}
+
+	// Fetch profiles for all team members in leaves
+	const profileIds = [...new Set(data.map((l) => l.team_member_id))];
+	const { data: profiles } = await supabase
+		.from("profiles")
+		.select("*")
+		.in("id", profileIds);
+
+	const profileMap = new Map<string, Profile>();
+	for (const profile of profiles || []) {
+		profileMap.set(profile.id, profile);
+	}
+
+	return data
+		.filter((leave) => profileMap.has(leave.team_member_id))
+		.map((leave) => ({
+			...leave,
+			team_member: profileToTeamMember(
+				profileMap.get(leave.team_member_id)!,
+			),
+		}));
 }
 
 export async function getLeavesForDate(
@@ -383,12 +370,7 @@ export async function getLeavesForDate(
 ): Promise<LeaveWithMember[]> {
 	const { data, error } = await supabase
 		.from("leaves")
-		.select(
-			`
-      *,
-      team_member:team_members(*)
-    `,
-		)
+		.select("*")
 		.eq("leave_date", date);
 
 	if (error) {
@@ -396,10 +378,30 @@ export async function getLeavesForDate(
 		return [];
 	}
 
-	return (data || []).map((leave) => ({
-		...leave,
-		team_member: leave.team_member as unknown as TeamMember,
-	}));
+	if (!data || data.length === 0) {
+		return [];
+	}
+
+	// Fetch profiles for all team members in leaves
+	const profileIds = [...new Set(data.map((l) => l.team_member_id))];
+	const { data: profiles } = await supabase
+		.from("profiles")
+		.select("*")
+		.in("id", profileIds);
+
+	const profileMap = new Map<string, Profile>();
+	for (const profile of profiles || []) {
+		profileMap.set(profile.id, profile);
+	}
+
+	return data
+		.filter((leave) => profileMap.has(leave.team_member_id))
+		.map((leave) => ({
+			...leave,
+			team_member: profileToTeamMember(
+				profileMap.get(leave.team_member_id)!,
+			),
+		}));
 }
 
 export async function createLeave(
