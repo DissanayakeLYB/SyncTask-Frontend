@@ -1,87 +1,107 @@
 import * as React from "react";
+import { useState, useEffect } from "react";
 
 import { NavLecturers } from "@/components/nav-lecturers";
-import { DatePicker } from "@/components/date-picker";
+import { DatePickerInline } from "@/components/date-picker";
+import { LeaveManagementModal } from "@/components/LeaveManagementModal";
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarRail,
-  SidebarSeparator,
+	Sidebar,
+	SidebarContent,
+	SidebarRail,
+	SidebarSeparator,
 } from "@/components/ui/sidebar";
-
-const data = {
-  people: [
-    {
-      name: "Nuwanga Akalanka",
-      emoji: "📊",
-    },
-    {
-      name: "Charuka Abeysinghe",
-      emoji: "🏅",
-    },
-    {
-      name: "Pramodi Rashmika",
-      emoji: "🤣",
-    },
-    {
-      name: "Dileka Sathsarani",
-      emoji: "🚀",
-    },
-    {
-      name: "Lasith Dissanayake",
-      emoji: "💻",
-    },
-    {
-      name: "Ashen Gunasekara",
-      emoji: "🐯",
-    },
-    {
-      name: "Warsha Yashodini",
-      emoji: "🌧️",
-    },
-    {
-      name: "Nayomi Dedunu",
-      emoji: "🌈",
-    },
-    {
-      name: "Shalitha Pathum",
-      emoji: "😌",
-    },
-  ],
-
-  user: {
-    name: "Lasith Dissanayake",
-    email: "dissanayakelyb.20@uom.lk",
-    emoji: "💻",
-  },
-};
+import { getTeamMembers, getLeaves } from "@/lib/database";
+import type { TeamMember, LeaveWithMember } from "@/types/database.types";
 
 export function SidebarLeft({
-  selectedPerson,
-  onPersonSelect,
-  ...props
+	selectedPerson,
+	onPersonSelect,
+	...props
 }: React.ComponentProps<typeof Sidebar> & {
-  selectedPerson: string | null;
-  onPersonSelect: (person: string | null) => void;
+	selectedPerson: string | null;
+	onPersonSelect: (person: string | null) => void;
 }) {
-  return (
-    <Sidebar className="border-r-0" {...props}>
-      <SidebarContent className="flex flex-col gap-3 overflow-y-auto">
-        <div className="space-y-3">
-          <NavLecturers
-            lecturers={data.people}
-            selectedPerson={selectedPerson}
-            onPersonSelect={onPersonSelect}
-          />
-        </div>
+	const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+	const [leaves, setLeaves] = useState<LeaveWithMember[]>([]);
+	const [selectedDate, setSelectedDate] = useState<Date | undefined>();
+	const [showLeaveModal, setShowLeaveModal] = useState(false);
 
-        <SidebarSeparator className="mx-0" />
+	useEffect(() => {
+		loadData();
+	}, []);
 
-        <div className="px-3">
-          <DatePicker />
-        </div>
-      </SidebarContent>
-      <SidebarRail />
-    </Sidebar>
-  );
+	async function loadData() {
+		try {
+			const [members, leavesData] = await Promise.all([
+				getTeamMembers(),
+				getLeaves(),
+			]);
+			setTeamMembers(members);
+			setLeaves(leavesData);
+		} catch (error) {
+			console.error("Error loading sidebar data:", error);
+		}
+	}
+
+	// Convert leaves to Date objects for the calendar
+	const leaveDates = leaves.map((leave) => new Date(leave.leave_date));
+
+	// Map team members to the format expected by NavLecturers
+	const lecturers = teamMembers.map((member) => ({
+		name: member.name,
+		emoji: member.emoji,
+		firstName: member.first_name,
+	}));
+
+	const handleDateClick = (date: Date) => {
+		setSelectedDate(date);
+		setShowLeaveModal(true);
+	};
+
+	const handleLeaveModalClose = () => {
+		setShowLeaveModal(false);
+		setSelectedDate(undefined);
+	};
+
+	const handleLeaveSaved = () => {
+		// Reload leaves after saving
+		getLeaves().then(setLeaves);
+	};
+
+	return (
+		<Sidebar className="border-r-0" {...props}>
+			<SidebarContent className="flex flex-col gap-3 overflow-hidden">
+				<div className="flex-shrink-0">
+					<NavLecturers
+						lecturers={lecturers}
+						selectedPerson={selectedPerson}
+						onPersonSelect={onPersonSelect}
+					/>
+				</div>
+
+				<SidebarSeparator className="mx-0 flex-shrink-0" />
+
+				<div className="px-2 pb-4 flex-shrink-0">
+					<p className="text-xs text-slate-400 mb-2 px-1">
+						Leave Calendar
+					</p>
+					<DatePickerInline
+						leaveDates={leaveDates}
+						onDateClick={handleDateClick}
+						className="w-full"
+					/>
+				</div>
+			</SidebarContent>
+			<SidebarRail />
+
+			{/* Leave Management Modal */}
+			{showLeaveModal && selectedDate && (
+				<LeaveManagementModal
+					date={selectedDate}
+					onClose={handleLeaveModalClose}
+					onSave={handleLeaveSaved}
+				/>
+			)}
+		</Sidebar>
+	);
 }
