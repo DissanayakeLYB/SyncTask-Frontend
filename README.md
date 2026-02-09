@@ -70,11 +70,40 @@ pnpm dev
 
 Open [http://localhost:5173](http://localhost:5173)
 
-### 5. Create Admin User
+### 5. Create Users
 
-1. Sign up with your email
-2. Go to Supabase **Table Editor > profiles**
-3. Update your user's `role` from `member` to `admin`
+The app comes with default test accounts. You can create them using one of these methods:
+
+#### Option A: Run the Seed Script (Recommended)
+
+```bash
+# Set your service role key (find it in Supabase Dashboard > Settings > API)
+export SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+pnpm seed:users
+```
+
+#### Option B: Create Users Manually
+
+1. Go to Supabase **Authentication > Users**
+2. Click "Add user" and create users with the credentials below
+3. For admin user, go to **Table Editor > profiles** and set `role` to `admin`
+
+### Default User Accounts
+
+| Role   | Email                 | Password     |
+| ------ | --------------------- | ------------ |
+| Admin  | admin@synctask.com    | Admin@123    |
+| Member | nuwanga@synctask.com  | Nuwanga@123  |
+| Member | charuka@synctask.com  | Charuka@123  |
+| Member | pramodi@synctask.com  | Pramodi@123  |
+| Member | dileka@synctask.com   | Dileka@123   |
+| Member | lasith@synctask.com   | Lasith@123   |
+| Member | ashen@synctask.com    | Ashen@123    |
+| Member | warsha@synctask.com   | Warsha@123   |
+| Member | dedunu@synctask.com   | Dedunu@123   |
+| Member | shalitha@synctask.com | Shalitha@123 |
+
+> ⚠️ **Warning**: Change these passwords in production!
 
 ## How to Use
 
