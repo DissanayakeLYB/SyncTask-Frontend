@@ -203,6 +203,11 @@ export async function getTasks(): Promise<TaskWithAssignees[]> {
 		...new Set((assignees || []).map((a) => a.team_member_id)),
 	];
 
+	// Guard against empty array - Supabase .in() with empty array can behave unexpectedly
+	if (profileIds.length === 0) {
+		return tasks.map((task) => ({ ...task, assignees: [] }));
+	}
+
 	// Fetch profiles for all assignees
 	const { data: profiles } = await supabase
 		.from("profiles")
@@ -271,6 +276,7 @@ export async function createTask(
 	}
 
 	// Add assignees if provided
+	let assignedProfiles: Profile[] = [];
 	if (assigneeIds.length > 0) {
 		const assigneeRecords = assigneeIds.map((memberId) => ({
 			task_id: newTask.id,
@@ -283,18 +289,29 @@ export async function createTask(
 
 		if (assigneeError) {
 			console.error("Error adding assignees:", assigneeError);
+			// FK constraint may have failed - log the details
+			console.error("Assignee IDs attempted:", assigneeIds);
+		}
+
+		// Fetch assignees that were actually saved to the database
+		const { data: savedAssignees } = await supabase
+			.from("task_assignees")
+			.select("team_member_id")
+			.eq("task_id", newTask.id);
+
+		if (savedAssignees && savedAssignees.length > 0) {
+			const savedIds = savedAssignees.map((a) => a.team_member_id);
+			const { data: profiles } = await supabase
+				.from("profiles")
+				.select("*")
+				.in("id", savedIds);
+			assignedProfiles = profiles || [];
 		}
 	}
 
-	// Fetch the complete task with assignees (from profiles)
-	const { data: profiles } = await supabase
-		.from("profiles")
-		.select("*")
-		.in("id", assigneeIds);
-
 	return {
 		...newTask,
-		assignees: (profiles || []).map(profileToTeamMember),
+		assignees: assignedProfiles.map(profileToTeamMember),
 	};
 }
 
