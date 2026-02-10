@@ -344,9 +344,15 @@ export default function KanbanBoard({
 								className="border border-slate-600 bg-slate-800 text-white placeholder-slate-400 p-2 w-full rounded-md focus:outline-none focus:border-blue-500"
 							/>
 							<DatePicker
-								date={deadlineInput ? parseISO(deadlineInput) : undefined}
+								date={
+									deadlineInput
+										? parseISO(deadlineInput)
+										: undefined
+								}
 								onDateChange={(date) =>
-									setDeadlineInput(date ? format(date, "yyyy-MM-dd") : "")
+									setDeadlineInput(
+										date ? format(date, "yyyy-MM-dd") : "",
+									)
 								}
 								placeholder="Select deadline"
 								className="w-[180px]"

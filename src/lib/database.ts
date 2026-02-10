@@ -107,6 +107,63 @@ export async function getTeamMembers(): Promise<TeamMember[]> {
 	return (data || []).map(profileToTeamMember);
 }
 
+export async function createTeamMember(_member: {
+	name: string;
+	first_name: string;
+	emoji: string;
+}): Promise<TeamMember | null> {
+	// Since team members are based on profiles (auth users),
+	// we cannot create a new team member without creating an auth user first.
+	// This function is provided for compatibility but will log a warning.
+	console.warn(
+		"createTeamMember: Cannot create team member without creating auth user. Use user registration instead.",
+	);
+	return null;
+}
+
+export async function updateTeamMember(
+	memberId: string,
+	updates: Partial<Pick<TeamMember, "name" | "first_name" | "emoji">>,
+): Promise<TeamMember | null> {
+	// Update the profile - map TeamMember fields to Profile fields
+	const profileUpdates: { full_name?: string; emoji?: string } = {};
+
+	if (updates.name) {
+		profileUpdates.full_name = updates.name;
+	}
+	if (updates.emoji) {
+		profileUpdates.emoji = updates.emoji;
+	}
+
+	const { data, error } = await supabase
+		.from("profiles")
+		.update(profileUpdates)
+		.eq("id", memberId)
+		.select()
+		.single();
+
+	if (error) {
+		console.error("Error updating team member:", error);
+		return null;
+	}
+
+	return profileToTeamMember(data);
+}
+
+export async function deleteTeamMember(memberId: string): Promise<boolean> {
+	// Delete the profile (this will cascade to related records)
+	const { error } = await supabase
+		.from("profiles")
+		.delete()
+		.eq("id", memberId);
+
+	if (error) {
+		console.error("Error deleting team member:", error);
+		return false;
+	}
+	return true;
+}
+
 // ============================================
 // Task Operations
 // ============================================
