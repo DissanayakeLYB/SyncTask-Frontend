@@ -1,11 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import {
-	Trash2,
-	ChevronLeft,
-	ChevronRight,
-	Calendar,
-	Loader2,
-} from "lucide-react";
+import { Trash2, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
 	getTasks,
@@ -387,12 +381,6 @@ export default function KanbanBoard({
 										}
 									>
 										{member.emoji} {member.first_name}
-										{hasUpcomingLeave && (
-											<Calendar
-												size={12}
-												className="text-yellow-400"
-											/>
-										)}
 									</button>
 								);
 							})}

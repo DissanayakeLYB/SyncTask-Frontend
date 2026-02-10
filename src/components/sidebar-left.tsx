@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useState, useEffect, useCallback } from "react";
-import { parseISO } from "date-fns";
+import { parseISO, format } from "date-fns";
 
 import { NavLecturers } from "@/components/nav-lecturers";
 import { DatePickerInline } from "@/components/date-picker";
@@ -67,11 +67,22 @@ export function SidebarLeft({
 		.filter((leave) => leave.team_member_id !== user?.id)
 		.map((leave) => parseISO(leave.leave_date));
 
+	// Get today's date string for comparison
+	const todayString = format(new Date(), "yyyy-MM-dd");
+
+	// Get IDs of members on leave today
+	const membersOnLeaveToday = new Set(
+		leaves
+			.filter((leave) => leave.leave_date === todayString)
+			.map((leave) => leave.team_member_id),
+	);
+
 	// Map team members to the format expected by NavLecturers
 	const lecturers = teamMembers.map((member) => ({
 		name: member.name,
 		emoji: member.emoji,
 		firstName: member.first_name,
+		isOnLeaveToday: membersOnLeaveToday.has(member.id),
 	}));
 
 	const handleDateClick = (date: Date) => {

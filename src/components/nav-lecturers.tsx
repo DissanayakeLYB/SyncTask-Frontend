@@ -16,6 +16,7 @@ export function NavLecturers({
 		name: string;
 		emoji: string;
 		firstName?: string; // Optional - uses first word of name if not provided
+		isOnLeaveToday?: boolean; // Whether the person is on leave today
 	}[];
 	selectedPerson: string | null;
 	onPersonSelect: (person: string | null) => void;
@@ -44,9 +45,17 @@ export function NavLecturers({
 						<SidebarMenuItem key={item.name}>
 							<SidebarMenuButton asChild>
 								<a
-									title={item.name}
-									className={`mb-1 gap-2 cursor-pointer text-xs ${
-										isActive ? "bg-accent" : ""
+									title={
+										item.isOnLeaveToday
+											? `${item.name} (On Leave Today)`
+											: item.name
+									}
+									className={`mb-1 gap-2 cursor-pointer text-xs rounded-md transition-colors ${
+										isActive
+											? "bg-accent"
+											: item.isOnLeaveToday
+												? "bg-orange-500/30 text-orange-200"
+												: ""
 									}`}
 									onClick={() => handleClick(item)}
 								>
@@ -54,6 +63,11 @@ export function NavLecturers({
 										{item.emoji}
 									</span>
 									<span className="text-xs">{item.name}</span>
+									{item.isOnLeaveToday && (
+										<span className="ml-auto text-[10px] bg-orange-500/50 px-1.5 py-0.5 rounded text-orange-100">
+											Leave
+										</span>
+									)}
 								</a>
 							</SidebarMenuButton>
 						</SidebarMenuItem>
