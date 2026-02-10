@@ -24,6 +24,11 @@ function DashboardLayout() {
 	const [passwordError, setPasswordError] = useState("");
 	const [passwordSuccess, setPasswordSuccess] = useState(false);
 	const [isChangingPassword, setIsChangingPassword] = useState(false);
+	const [taskCounts, setTaskCounts] = useState({
+		todo: 0,
+		working: 0,
+		done: 0,
+	});
 
 	const handleLogout = async () => {
 		setShowUserModal(false);
@@ -88,7 +93,20 @@ function DashboardLayout() {
 					<div className="flex flex-1 items-center gap-2 px-3">
 						<SidebarTrigger />
 					</div>
-					<div className="flex items-center gap-2 px-4">
+					<div className="flex items-center gap-4 px-4">
+						<div className="flex items-center gap-2 font-mono text-sm">
+							<span className="text-red-400 font-bold">
+								{taskCounts.todo.toString().padStart(2, "0")}
+							</span>
+							<span className="text-slate-500">|</span>
+							<span className="text-yellow-400 font-bold">
+								{taskCounts.working.toString().padStart(2, "0")}
+							</span>
+							<span className="text-slate-500">|</span>
+							<span className="text-green-400 font-bold">
+								{taskCounts.done.toString().padStart(2, "0")}
+							</span>
+						</div>
 						<button
 							onClick={() => setShowUserModal(true)}
 							className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 hover:bg-blue-700 text-white text-lg font-semibold transition-colors cursor-pointer"
@@ -98,7 +116,10 @@ function DashboardLayout() {
 						</button>
 					</div>
 				</header>
-				<KanbanBoard selectedPerson={selectedPerson} />
+				<KanbanBoard
+					selectedPerson={selectedPerson}
+					onTaskCountsChange={setTaskCounts}
+				/>
 			</SidebarInset>
 
 			{/* User Profile Modal */}

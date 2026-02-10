@@ -30,8 +30,14 @@ interface ModalState {
 
 export default function KanbanBoard({
 	selectedPerson,
+	onTaskCountsChange,
 }: {
 	selectedPerson: string | null;
+	onTaskCountsChange?: (counts: {
+		todo: number;
+		working: number;
+		done: number;
+	}) => void;
 }) {
 	const { user, isAdmin } = useAuth();
 	const [tasks, setTasks] = useState<TaskWithAssignees[]>([]);
@@ -232,6 +238,25 @@ export default function KanbanBoard({
 		);
 	};
 
+	// Update parent with task counts
+	useEffect(() => {
+		if (onTaskCountsChange) {
+			const filteredTasks = selectedPerson
+				? tasks.filter((task) =>
+						task.assignees.some(
+							(a) => a.first_name === selectedPerson,
+						),
+					)
+				: tasks;
+			onTaskCountsChange({
+				todo: filteredTasks.filter((t) => t.status === "todo").length,
+				working: filteredTasks.filter((t) => t.status === "working")
+					.length,
+				done: filteredTasks.filter((t) => t.status === "done").length,
+			});
+		}
+	}, [tasks, selectedPerson, onTaskCountsChange]);
+
 	// Check if a person is on leave today
 	const getPersonLeaveInfo = (memberFirstName: string) => {
 		return leaves.filter(
@@ -378,11 +403,6 @@ export default function KanbanBoard({
 												? "bg-blue-600 border-blue-500 text-white"
 												: "bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600"
 										}`}
-										title={
-											hasUpcomingLeave
-												? `${member.first_name} - On leave`
-												: `Tag ${member.first_name}`
-										}
 									>
 										{member.emoji} {member.first_name}
 									</button>
