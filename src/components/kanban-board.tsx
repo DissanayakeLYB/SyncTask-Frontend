@@ -292,34 +292,32 @@ export default function KanbanBoard({
 								))}
 							</div>
 						)}
-						{isAdmin && (
-							<div className="flex gap-2 justify-between">
-								{prevLevel && (
-									<button
-										onClick={() =>
-											openMoveModal(task, prevLevel)
-										}
-										className="flex items-center gap-1 text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded transition text-slate-200"
-										title={`Move to ${prevLevel}`}
-									>
-										<ChevronLeft size={14} />
-										{prevLevel}
-									</button>
-								)}
-								{nextLevel && (
-									<button
-										onClick={() =>
-											openMoveModal(task, nextLevel)
-										}
-										className="flex items-center gap-1 text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded transition ml-auto text-slate-200"
-										title={`Move to ${nextLevel}`}
-									>
-										{nextLevel}
-										<ChevronRight size={14} />
-									</button>
-								)}
-							</div>
-						)}
+						<div className="flex gap-2 justify-between">
+							{prevLevel && (
+								<button
+									onClick={() =>
+										openMoveModal(task, prevLevel)
+									}
+									className="flex items-center gap-1 text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded transition text-slate-200"
+									title={`Move to ${prevLevel}`}
+								>
+									<ChevronLeft size={14} />
+									{prevLevel}
+								</button>
+							)}
+							{nextLevel && (
+								<button
+									onClick={() =>
+										openMoveModal(task, nextLevel)
+									}
+									className="flex items-center gap-1 text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded transition ml-auto text-slate-200"
+									title={`Move to ${nextLevel}`}
+								>
+									{nextLevel}
+									<ChevronRight size={14} />
+								</button>
+							)}
+						</div>
 					</div>
 				);
 			});
