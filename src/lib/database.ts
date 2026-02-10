@@ -340,15 +340,23 @@ export async function getLeaves(): Promise<LeaveWithMember[]> {
 	}
 
 	if (!data || data.length === 0) {
+		console.log("No leaves found in database");
 		return [];
 	}
 
+	console.log("Fetched leaves:", data.length, "entries");
+
 	// Fetch profiles for all team members in leaves
 	const profileIds = [...new Set(data.map((l) => l.team_member_id))];
-	const { data: profiles } = await supabase
+	const { data: profiles, error: profilesError } = await supabase
 		.from("profiles")
 		.select("*")
 		.in("id", profileIds);
+
+	if (profilesError) {
+		console.error("Error fetching profiles for leaves:", profilesError);
+		return [];
+	}
 
 	const profileMap = new Map<string, Profile>();
 	for (const profile of profiles || []) {
@@ -409,6 +417,8 @@ export async function createLeave(
 	leaveDate: string,
 	createdBy: string,
 ): Promise<Leave | null> {
+	console.log("Creating leave:", { teamMemberId, leaveDate, createdBy });
+
 	const { data, error } = await supabase
 		.from("leaves")
 		.insert({
@@ -425,9 +435,17 @@ export async function createLeave(
 			console.log("Leave already exists for this date");
 			return null;
 		}
+		// Log foreign key violations for debugging
+		if (error.code === "23503") {
+			console.error(
+				"Foreign key violation - Invalid team member or user ID:",
+				error,
+			);
+		}
 		console.error("Error creating leave:", error);
 		return null;
 	}
+	console.log("Leave created successfully:", data);
 	return data;
 }
 

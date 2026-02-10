@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { parseISO } from "date-fns";
 
 import { NavLecturers } from "@/components/nav-lecturers";
@@ -11,7 +11,8 @@ import {
 	SidebarRail,
 	SidebarSeparator,
 } from "@/components/ui/sidebar";
-import { getTeamMembers, getLeaves } from "@/lib/database";
+import { getTeamMembers, getLeaves, subscribeToLeaves } from "@/lib/database";
+import { useAuth } from "@/contexts/AuthContext";
 import type { TeamMember, LeaveWithMember } from "@/types/database.types";
 
 export function SidebarLeft({
@@ -22,16 +23,13 @@ export function SidebarLeft({
 	selectedPerson: string | null;
 	onPersonSelect: (person: string | null) => void;
 }) {
+	const { user } = useAuth();
 	const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
 	const [leaves, setLeaves] = useState<LeaveWithMember[]>([]);
 	const [selectedDate, setSelectedDate] = useState<Date | undefined>();
 	const [showLeaveModal, setShowLeaveModal] = useState(false);
 
-	useEffect(() => {
-		loadData();
-	}, []);
-
-	async function loadData() {
+	const loadData = useCallback(async () => {
 		try {
 			const [members, leavesData] = await Promise.all([
 				getTeamMembers(),
@@ -42,11 +40,32 @@ export function SidebarLeft({
 		} catch (error) {
 			console.error("Error loading sidebar data:", error);
 		}
-	}
+	}, []);
+
+	useEffect(() => {
+		loadData();
+
+		// Subscribe to real-time leave changes so all users see updates
+		const subscription = subscribeToLeaves(() => {
+			// Reload leaves when any change occurs
+			loadData();
+		});
+
+		return () => {
+			subscription.unsubscribe();
+		};
+	}, [loadData]);
 
 	// Convert leaves to Date objects for the calendar
-	// Use parseISO to correctly parse dates without timezone issues
-	const leaveDates = leaves.map((leave) => parseISO(leave.leave_date));
+	// Separate own leaves from others' leaves
+	const ownLeaveDates = leaves
+		.filter((leave) => leave.team_member_id === user?.id)
+		.map((leave) => parseISO(leave.leave_date));
+
+	// Others' leaves (not including own)
+	const othersLeaveDates = leaves
+		.filter((leave) => leave.team_member_id !== user?.id)
+		.map((leave) => parseISO(leave.leave_date));
 
 	// Map team members to the format expected by NavLecturers
 	const lecturers = teamMembers.map((member) => ({
@@ -66,8 +85,8 @@ export function SidebarLeft({
 	};
 
 	const handleLeaveSaved = () => {
-		// Reload leaves after saving
-		getLeaves().then(setLeaves);
+		// Reload leaves after saving - the real-time subscription will also trigger
+		loadData();
 	};
 
 	return (
@@ -88,7 +107,8 @@ export function SidebarLeft({
 						Leave Calendar
 					</p>
 					<DatePickerInline
-						leaveDates={leaveDates}
+						leaveDates={othersLeaveDates}
+						ownLeaveDates={ownLeaveDates}
 						onDateClick={handleDateClick}
 						className="w-full"
 					/>

@@ -51,9 +51,10 @@ CREATE TABLE task_assignees (
 );
 
 -- Leaves table
+-- Note: team_member_id references profiles(id) since users are the team members
 CREATE TABLE leaves (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-  team_member_id UUID REFERENCES team_members(id) ON DELETE CASCADE NOT NULL,
+  team_member_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
   leave_date DATE NOT NULL,
   created_by UUID REFERENCES profiles(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),

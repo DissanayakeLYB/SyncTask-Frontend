@@ -17,6 +17,7 @@ interface DatePickerProps {
 	date?: Date;
 	onDateChange?: (date: Date | undefined) => void;
 	leaveDates?: Date[];
+	ownLeaveDates?: Date[];
 	onDateClick?: (date: Date) => void;
 	placeholder?: string;
 	className?: string;
@@ -26,6 +27,7 @@ export function DatePicker({
 	date,
 	onDateChange,
 	leaveDates = [],
+	ownLeaveDates = [],
 	onDateClick,
 	placeholder = "Pick a date",
 	className,
@@ -43,20 +45,38 @@ export function DatePicker({
 		}
 	};
 
+	// Helper to check if date matches any in list
+	const dateMatches = (date: Date, dateList: Date[]) => {
+		return dateList.some(
+			(d) =>
+				d.getFullYear() === date.getFullYear() &&
+				d.getMonth() === date.getMonth() &&
+				d.getDate() === date.getDate(),
+		);
+	};
+
 	// Modifier for dates that have leaves - compare by date string to avoid timezone issues
 	const leaveModifier = {
-		leave: (date: Date) => {
-			return leaveDates.some(
-				(leaveDate) =>
-					leaveDate.getFullYear() === date.getFullYear() &&
-					leaveDate.getMonth() === date.getMonth() &&
-					leaveDate.getDate() === date.getDate(),
-			);
+		// Own leave - blue color
+		owns_leave: (date: Date) => dateMatches(date, ownLeaveDates),
+		// Others' leave (but not own) - orange color  
+		others_leave: (date: Date) => {
+			const hasOthersLeave = dateMatches(date, leaveDates);
+			const hasOwnLeave = dateMatches(date, ownLeaveDates);
+			return hasOthersLeave && !hasOwnLeave;
+		},
+		// Both own and others - purple color
+		both_leave: (date: Date) => {
+			const hasOthersLeave = dateMatches(date, leaveDates);
+			const hasOwnLeave = dateMatches(date, ownLeaveDates);
+			return hasOthersLeave && hasOwnLeave;
 		},
 	};
 
 	const modifiersClassNames = {
-		leave: "[&>button]:bg-red-500/30 [&>button]:text-red-400 [&>button]:font-bold",
+		owns_leave: "rdp-leave-own",
+		others_leave: "rdp-leave-others",
+		both_leave: "rdp-leave-both",
 	};
 
 	return (
@@ -97,6 +117,7 @@ export function DatePickerInline({
 	date,
 	onDateChange,
 	leaveDates = [],
+	ownLeaveDates = [],
 	onDateClick,
 	className,
 }: Omit<DatePickerProps, "placeholder">) {
@@ -112,20 +133,38 @@ export function DatePickerInline({
 		}
 	};
 
+	// Helper to check if date matches any in list
+	const dateMatches = (date: Date, dateList: Date[]) => {
+		return dateList.some(
+			(d) =>
+				d.getFullYear() === date.getFullYear() &&
+				d.getMonth() === date.getMonth() &&
+				d.getDate() === date.getDate(),
+		);
+	};
+
 	// Modifier for dates that have leaves - compare by date string to avoid timezone issues
 	const leaveModifier = {
-		leave: (date: Date) => {
-			return leaveDates.some(
-				(leaveDate) =>
-					leaveDate.getFullYear() === date.getFullYear() &&
-					leaveDate.getMonth() === date.getMonth() &&
-					leaveDate.getDate() === date.getDate(),
-			);
+		// Own leave - blue color
+		owns_leave: (date: Date) => dateMatches(date, ownLeaveDates),
+		// Others' leave (but not own) - orange color  
+		others_leave: (date: Date) => {
+			const hasOthersLeave = dateMatches(date, leaveDates);
+			const hasOwnLeave = dateMatches(date, ownLeaveDates);
+			return hasOthersLeave && !hasOwnLeave;
+		},
+		// Both own and others - purple color
+		both_leave: (date: Date) => {
+			const hasOthersLeave = dateMatches(date, leaveDates);
+			const hasOwnLeave = dateMatches(date, ownLeaveDates);
+			return hasOthersLeave && hasOwnLeave;
 		},
 	};
 
 	const modifiersClassNames = {
-		leave: "[&>button]:bg-red-500/30 [&>button]:text-red-400 [&>button]:font-bold",
+		owns_leave: "rdp-leave-own",
+		others_leave: "rdp-leave-others",
+		both_leave: "rdp-leave-both",
 	};
 
 	return (
