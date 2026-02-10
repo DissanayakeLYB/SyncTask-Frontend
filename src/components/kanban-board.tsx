@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { Trash2, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { format, parseISO } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
+import { DatePicker } from "@/components/date-picker";
 import {
 	getTasks,
 	getTeamMembers,
@@ -341,15 +343,13 @@ export default function KanbanBoard({
 								onChange={(e) => setTaskInput(e.target.value)}
 								className="border border-slate-600 bg-slate-800 text-white placeholder-slate-400 p-2 w-full rounded-md focus:outline-none focus:border-blue-500"
 							/>
-							<input
-								type="date"
-								name="deadline"
-								id="deadline"
-								value={deadlineInput}
-								onChange={(e) =>
-									setDeadlineInput(e.target.value)
+							<DatePicker
+								date={deadlineInput ? parseISO(deadlineInput) : undefined}
+								onDateChange={(date) =>
+									setDeadlineInput(date ? format(date, "yyyy-MM-dd") : "")
 								}
-								className="border border-slate-600 bg-slate-800 text-white p-2 rounded-md focus:outline-none focus:border-blue-500"
+								placeholder="Select deadline"
+								className="w-[180px]"
 							/>
 						</div>
 						<div className="flex flex-wrap gap-2">
