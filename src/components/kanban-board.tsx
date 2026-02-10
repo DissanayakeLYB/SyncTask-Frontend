@@ -6,7 +6,6 @@ import { DatePicker } from "@/components/date-picker";
 import {
 	getTasks,
 	getTeamMembers,
-	getLeaves,
 	createTask as createTaskDb,
 	updateTaskStatus as updateTaskStatusDb,
 	deleteTask as deleteTaskDb,
@@ -15,7 +14,6 @@ import {
 import type {
 	TaskWithAssignees,
 	TeamMember,
-	LeaveWithMember,
 	TaskStatus,
 } from "@/types/database.types";
 
@@ -42,7 +40,6 @@ export default function KanbanBoard({
 	const { user, isAdmin } = useAuth();
 	const [tasks, setTasks] = useState<TaskWithAssignees[]>([]);
 	const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
-	const [leaves, setLeaves] = useState<LeaveWithMember[]>([]);
 	const [isLoading, setIsLoading] = useState(true);
 	const [taskInput, setTaskInput] = useState("");
 	const [deadlineInput, setDeadlineInput] = useState("");
@@ -56,14 +53,12 @@ export default function KanbanBoard({
 	const loadData = useCallback(async () => {
 		setIsLoading(true);
 		try {
-			const [tasksData, membersData, leavesData] = await Promise.all([
+			const [tasksData, membersData] = await Promise.all([
 				getTasks(),
 				getTeamMembers(),
-				getLeaves(),
 			]);
 			setTasks(tasksData);
 			setTeamMembers(membersData);
-			setLeaves(leavesData);
 		} catch (error) {
 			console.error("Error fetching data:", error);
 		} finally {
@@ -257,13 +252,6 @@ export default function KanbanBoard({
 		}
 	}, [tasks, selectedPerson, onTaskCountsChange]);
 
-	// Check if a person is on leave today
-	const getPersonLeaveInfo = (memberFirstName: string) => {
-		return leaves.filter(
-			(leave) => leave.team_member.first_name === memberFirstName,
-		);
-	};
-
 	const formatDeadline = (deadline: string | null): string => {
 		if (!deadline) return "Not specified";
 		try {
@@ -388,11 +376,6 @@ export default function KanbanBoard({
 								const active = selectedMemberIds.includes(
 									member.id,
 								);
-								const memberLeaves = getPersonLeaveInfo(
-									member.first_name,
-								);
-								const hasUpcomingLeave =
-									memberLeaves.length > 0;
 								return (
 									<button
 										key={member.id}
