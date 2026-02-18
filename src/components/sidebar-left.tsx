@@ -56,16 +56,22 @@ export function SidebarLeft({
 		};
 	}, [loadData]);
 
-	// Convert leaves to Date objects for the calendar
+	// Convert leaves to objects with date and type for the calendar
 	// Separate own leaves from others' leaves
-	const ownLeaveDates = leaves
+	const ownLeaves = leaves
 		.filter((leave) => leave.team_member_id === user?.id)
-		.map((leave) => parseISO(leave.leave_date));
+		.map((leave) => ({
+			date: parseISO(leave.leave_date),
+			type: leave.leave_type,
+		}));
 
 	// Others' leaves (not including own)
-	const othersLeaveDates = leaves
+	const othersLeaves = leaves
 		.filter((leave) => leave.team_member_id !== user?.id)
-		.map((leave) => parseISO(leave.leave_date));
+		.map((leave) => ({
+			date: parseISO(leave.leave_date),
+			type: leave.leave_type,
+		}));
 
 	// Get today's date string for comparison
 	const todayString = format(new Date(), "yyyy-MM-dd");
@@ -118,8 +124,8 @@ export function SidebarLeft({
 						Leave Calendar
 					</p>
 					<DatePickerInline
-						leaveDates={othersLeaveDates}
-						ownLeaveDates={ownLeaveDates}
+						leaves={othersLeaves}
+						ownLeaves={ownLeaves}
 						onDateClick={handleDateClick}
 						className="w-full"
 					/>

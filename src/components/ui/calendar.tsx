@@ -204,13 +204,23 @@ function CalendarDayButton({
 	}, [modifiers.focused]);
 
 	// Determine leave styling based on custom modifiers
+	// Priority: both > own/others full day > own/others half day
 	const leaveClassName = modifiers.both_leave
 		? "!bg-purple-500/40 !text-purple-200 !font-semibold"
-		: modifiers.owns_leave
-			? "!bg-blue-500/40 !text-blue-200 !font-semibold"
-			: modifiers.others_leave
-				? "!bg-orange-500/40 !text-orange-200 !font-semibold"
-				: "";
+		: modifiers.owns_leave_full || modifiers.others_leave_full
+			? modifiers.owns_leave_full
+				? "!bg-blue-500/40 !text-blue-200 !font-semibold"
+				: "!bg-orange-500/40 !text-orange-200 !font-semibold"
+			: modifiers.owns_leave_half_morning ||
+					modifiers.owns_leave_half_afternoon ||
+					modifiers.others_leave_half_morning ||
+					modifiers.others_leave_half_afternoon
+				? "" // Half-day styling is handled by CSS classes
+				: modifiers.owns_leave
+					? "!bg-blue-500/40 !text-blue-200 !font-semibold"
+					: modifiers.others_leave
+						? "!bg-orange-500/40 !text-orange-200 !font-semibold"
+						: "";
 
 	return (
 		<Button

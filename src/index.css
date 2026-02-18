@@ -120,14 +120,17 @@
 }
 
 /* Calendar leave indicator styles */
-.rdp-leave-own button {
+/* Full day leave - solid background */
+.rdp-leave-own button,
+.rdp-leave-own-full button {
   background-color: rgba(59, 130, 246, 0.4) !important;
   color: rgb(147, 197, 253) !important;
   font-weight: 600 !important;
   border-radius: 0.375rem;
 }
 
-.rdp-leave-others button {
+.rdp-leave-others button,
+.rdp-leave-others-full button {
   background-color: rgba(249, 115, 22, 0.4) !important;
   color: rgb(253, 186, 116) !important;
   font-weight: 600 !important;
@@ -139,4 +142,102 @@
   color: rgb(216, 180, 254) !important;
   font-weight: 600 !important;
   border-radius: 0.375rem;
+}
+
+/* Half day morning leave - top half colored with border */
+.rdp-leave-own-half-morning button {
+  background-color: transparent !important;
+  color: rgb(147, 197, 253) !important;
+  font-weight: 600 !important;
+  border-radius: 0.375rem;
+  position: relative;
+  border-top: 3px solid rgba(59, 130, 246, 0.8) !important;
+  border-left: 1px solid rgba(59, 130, 246, 0.3) !important;
+  border-right: 1px solid rgba(59, 130, 246, 0.3) !important;
+  border-bottom: 1px solid rgba(59, 130, 246, 0.2) !important;
+}
+
+.rdp-leave-own-half-morning button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background-color: rgba(59, 130, 246, 0.25);
+  border-radius: 0.375rem 0.375rem 0 0;
+  z-index: -1;
+}
+
+.rdp-leave-others-half-morning button {
+  background-color: transparent !important;
+  color: rgb(253, 186, 116) !important;
+  font-weight: 600 !important;
+  border-radius: 0.375rem;
+  position: relative;
+  border-top: 3px solid rgba(249, 115, 22, 0.8) !important;
+  border-left: 1px solid rgba(249, 115, 22, 0.3) !important;
+  border-right: 1px solid rgba(249, 115, 22, 0.3) !important;
+  border-bottom: 1px solid rgba(249, 115, 22, 0.2) !important;
+}
+
+.rdp-leave-others-half-morning button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background-color: rgba(249, 115, 22, 0.25);
+  border-radius: 0.375rem 0.375rem 0 0;
+  z-index: -1;
+}
+
+/* Half day afternoon leave - bottom half colored with border */
+.rdp-leave-own-half-afternoon button {
+  background-color: transparent !important;
+  color: rgb(147, 197, 253) !important;
+  font-weight: 600 !important;
+  border-radius: 0.375rem;
+  position: relative;
+  border-bottom: 3px solid rgba(59, 130, 246, 0.8) !important;
+  border-left: 1px solid rgba(59, 130, 246, 0.3) !important;
+  border-right: 1px solid rgba(59, 130, 246, 0.3) !important;
+  border-top: 1px solid rgba(59, 130, 246, 0.2) !important;
+}
+
+.rdp-leave-own-half-afternoon button::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background-color: rgba(59, 130, 246, 0.25);
+  border-radius: 0 0 0.375rem 0.375rem;
+  z-index: -1;
+}
+
+.rdp-leave-others-half-afternoon button {
+  background-color: transparent !important;
+  color: rgb(253, 186, 116) !important;
+  font-weight: 600 !important;
+  border-radius: 0.375rem;
+  position: relative;
+  border-bottom: 3px solid rgba(249, 115, 22, 0.8) !important;
+  border-left: 1px solid rgba(249, 115, 22, 0.3) !important;
+  border-right: 1px solid rgba(249, 115, 22, 0.3) !important;
+  border-top: 1px solid rgba(249, 115, 22, 0.2) !important;
+}
+
+.rdp-leave-others-half-afternoon button::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background-color: rgba(249, 115, 22, 0.25);
+  border-radius: 0 0 0.375rem 0.375rem;
+  z-index: -1;
 }
