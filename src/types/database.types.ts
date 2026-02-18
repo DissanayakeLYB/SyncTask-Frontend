@@ -8,6 +8,7 @@ export type Json =
 
 export type UserRole = "admin" | "member";
 export type TaskStatus = "todo" | "working" | "done";
+export type LeaveType = "full_day" | "half_day_morning" | "half_day_afternoon";
 
 export interface Database {
 	public: {
@@ -124,6 +125,7 @@ export interface Database {
 					id: string;
 					team_member_id: string;
 					leave_date: string;
+					leave_type: LeaveType;
 					created_by: string;
 					created_at: string;
 				};
@@ -131,6 +133,7 @@ export interface Database {
 					id?: string;
 					team_member_id: string;
 					leave_date: string;
+					leave_type?: LeaveType;
 					created_by: string;
 					created_at?: string;
 				};
@@ -138,6 +141,7 @@ export interface Database {
 					id?: string;
 					team_member_id?: string;
 					leave_date?: string;
+					leave_type?: LeaveType;
 					created_by?: string;
 					created_at?: string;
 				};
@@ -152,6 +156,7 @@ export interface Database {
 		Enums: {
 			user_role: UserRole;
 			task_status: TaskStatus;
+			leave_type: LeaveType;
 		};
 	};
 }

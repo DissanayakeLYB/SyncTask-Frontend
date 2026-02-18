@@ -7,6 +7,7 @@ import type {
 	Leave,
 	LeaveWithMember,
 	TaskStatus,
+	LeaveType,
 } from "@/types/database.types";
 
 // ============================================
@@ -490,14 +491,16 @@ export async function createLeave(
 	teamMemberId: string,
 	leaveDate: string,
 	createdBy: string,
+	leaveType: "full_day" | "half_day_morning" | "half_day_afternoon" = "full_day",
 ): Promise<Leave | null> {
-	console.log("Creating leave:", { teamMemberId, leaveDate, createdBy });
+	console.log("Creating leave:", { teamMemberId, leaveDate, createdBy, leaveType });
 
 	const { data, error } = await supabase
 		.from("leaves")
 		.insert({
 			team_member_id: teamMemberId,
 			leave_date: leaveDate,
+			leave_type: leaveType,
 			created_by: createdBy,
 		})
 		.select()
@@ -536,12 +539,19 @@ export async function deleteLeave(leaveId: string): Promise<boolean> {
 export async function deleteLeavesForMemberOnDate(
 	teamMemberId: string,
 	leaveDate: string,
+	leaveType?: LeaveType,
 ): Promise<boolean> {
-	const { error } = await supabase
+	let query = supabase
 		.from("leaves")
 		.delete()
 		.eq("team_member_id", teamMemberId)
 		.eq("leave_date", leaveDate);
+	
+	if (leaveType) {
+		query = query.eq("leave_type", leaveType);
+	}
+
+	const { error } = await query;
 
 	if (error) {
 		console.error("Error deleting leave:", error);

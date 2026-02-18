@@ -8,7 +8,11 @@ import {
 	createLeave,
 	deleteLeavesForMemberOnDate,
 } from "@/lib/database";
-import type { TeamMember, LeaveWithMember } from "@/types/database.types";
+import type {
+	TeamMember,
+	LeaveWithMember,
+	LeaveType,
+} from "@/types/database.types";
 
 interface LeaveManagementModalProps {
 	date: Date;
@@ -24,9 +28,9 @@ export function LeaveManagementModal({
 	const { user } = useAuth();
 	const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
 	const [existingLeaves, setExistingLeaves] = useState<LeaveWithMember[]>([]);
-	const [selectedMembers, setSelectedMembers] = useState<Set<string>>(
-		new Set(),
-	);
+	const [selectedLeaveType, setSelectedLeaveType] = useState<
+		LeaveType | "none"
+	>("none");
 	const [isLoading, setIsLoading] = useState(true);
 	const [isSaving, setIsSaving] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -44,11 +48,15 @@ export function LeaveManagementModal({
 				setTeamMembers(members);
 				setExistingLeaves(leaves);
 
-				// Pre-select members who already have leave on this date
-				const existingLeaveMembers = new Set(
-					leaves.map((l) => l.team_member_id),
+				// Pre-select the current user's leave type if they have one
+				const currentUserLeave = leaves.find(
+					(l) => l.team_member_id === user?.id,
 				);
-				setSelectedMembers(existingLeaveMembers);
+				if (currentUserLeave) {
+					setSelectedLeaveType(currentUserLeave.leave_type);
+				} else {
+					setSelectedLeaveType("none");
+				}
 			} catch (err) {
 				console.error("Error loading data:", err);
 				setError("Failed to load data");
@@ -73,55 +81,34 @@ export function LeaveManagementModal({
 		(leave) => leave.team_member_id !== currentUserTeamMemberId,
 	);
 
-	// Check if a member can be edited by the current user (everyone can only edit their own)
-	const canEditMember = (memberId: string) => {
-		return memberId === currentUserTeamMemberId;
-	};
-
-	const toggleMember = (memberId: string) => {
-		// Only allow toggling if user can edit this member
-		if (!canEditMember(memberId)) return;
-
-		setSelectedMembers((prev) => {
-			const newSet = new Set(prev);
-			if (newSet.has(memberId)) {
-				newSet.delete(memberId);
-			} else {
-				newSet.add(memberId);
-			}
-			return newSet;
-		});
-	};
+	// Get the current user's existing leave
+	const currentUserLeave = existingLeaves.find(
+		(l) => l.team_member_id === currentUserTeamMemberId,
+	);
 
 	const handleSave = async () => {
-		if (!user) return;
+		if (!user || !currentUserTeamMemberId) return;
 
 		setIsSaving(true);
 		setError(null);
 
 		try {
-			const existingMemberIds = new Set(
-				existingLeaves.map((l) => l.team_member_id),
-			);
-
-			// Members to add (selected but not existing) - only those the user can edit
-			const membersToAdd = [...selectedMembers].filter(
-				(id) => !existingMemberIds.has(id) && canEditMember(id),
-			);
-
-			// Members to remove (existing but not selected) - only those the user can edit
-			const membersToRemove = [...existingMemberIds].filter(
-				(id) => !selectedMembers.has(id) && canEditMember(id),
-			);
-
-			// Add new leaves
-			for (const memberId of membersToAdd) {
-				await createLeave(memberId, dateString, user.id);
+			// Delete existing leave if any
+			if (currentUserLeave) {
+				await deleteLeavesForMemberOnDate(
+					currentUserTeamMemberId,
+					dateString,
+				);
 			}
 
-			// Remove unchecked leaves
-			for (const memberId of membersToRemove) {
-				await deleteLeavesForMemberOnDate(memberId, dateString);
+			// Create new leave if a type is selected
+			if (selectedLeaveType !== "none") {
+				await createLeave(
+					currentUserTeamMemberId,
+					dateString,
+					user.id,
+					selectedLeaveType,
+				);
 			}
 
 			onSave?.();
@@ -176,51 +163,63 @@ export function LeaveManagementModal({
 								<p className="text-sm font-medium text-slate-300 mb-3">
 									Your Leave Status
 								</p>
-								<label className="flex items-center gap-4 cursor-pointer">
-									<div
-										className={`relative w-12 h-6 rounded-full transition-colors ${
-											selectedMembers.has(
-												currentUserTeamMemberId!,
-											)
-												? "bg-blue-600"
-												: "bg-slate-600"
-										}`}
-									>
-										<div
-											className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${
-												selectedMembers.has(
-													currentUserTeamMemberId!,
-												)
-													? "translate-x-6"
-													: ""
-											}`}
+								<div className="space-y-2">
+									<label className="flex items-center gap-3 cursor-pointer p-2 rounded-md hover:bg-slate-600/50 transition-colors">
+										<input
+											type="radio"
+											name="leaveType"
+											value="none"
+											checked={selectedLeaveType === "none"}
+											onChange={() => setSelectedLeaveType("none")}
+											className="w-4 h-4 text-blue-600 bg-slate-700 border-slate-500 focus:ring-blue-500 focus:ring-2"
 										/>
-									</div>
-									<input
-										type="checkbox"
-										checked={selectedMembers.has(
-											currentUserTeamMemberId!,
-										)}
-										onChange={() =>
-											toggleMember(
-												currentUserTeamMemberId!,
-											)
-										}
-										className="sr-only"
-									/>
-									<div className="flex items-center gap-2">
 										<span className="text-xl">
 											{currentUserTeamMember.emoji}
 										</span>
+										<span className="text-slate-100">Working</span>
+									</label>
+									<label className="flex items-center gap-3 cursor-pointer p-2 rounded-md hover:bg-slate-600/50 transition-colors">
+										<input
+											type="radio"
+											name="leaveType"
+											value="full_day"
+											checked={selectedLeaveType === "full_day"}
+											onChange={() => setSelectedLeaveType("full_day")}
+											className="w-4 h-4 text-blue-600 bg-slate-700 border-slate-500 focus:ring-blue-500 focus:ring-2"
+										/>
+										<span className="text-slate-100">Full Day Leave</span>
+									</label>
+									<label className="flex items-center gap-3 cursor-pointer p-2 rounded-md hover:bg-slate-600/50 transition-colors">
+										<input
+											type="radio"
+											name="leaveType"
+											value="half_day_morning"
+											checked={selectedLeaveType === "half_day_morning"}
+											onChange={() =>
+												setSelectedLeaveType("half_day_morning")
+											}
+											className="w-4 h-4 text-blue-600 bg-slate-700 border-slate-500 focus:ring-blue-500 focus:ring-2"
+										/>
 										<span className="text-slate-100">
-											{selectedMembers.has(
-												currentUserTeamMemberId!,
-											)
-												? "On Leave"
-												: "Working"}
+											Half Day - Morning Leave
 										</span>
-									</div>
-								</label>
+									</label>
+									<label className="flex items-center gap-3 cursor-pointer p-2 rounded-md hover:bg-slate-600/50 transition-colors">
+										<input
+											type="radio"
+											name="leaveType"
+											value="half_day_afternoon"
+											checked={selectedLeaveType === "half_day_afternoon"}
+											onChange={() =>
+												setSelectedLeaveType("half_day_afternoon")
+											}
+											className="w-4 h-4 text-blue-600 bg-slate-700 border-slate-500 focus:ring-blue-500 focus:ring-2"
+										/>
+										<span className="text-slate-100">
+											Half Day - Afternoon Leave
+										</span>
+									</label>
+								</div>
 							</div>
 						)}
 
@@ -232,19 +231,30 @@ export function LeaveManagementModal({
 							</p>
 							{othersOnLeave.length > 0 ? (
 								<div className="space-y-2">
-									{othersOnLeave.map((leave) => (
-										<div
-											key={leave.id}
-											className="flex items-center gap-3 p-2 rounded-md bg-slate-700/30"
-										>
-											<span className="text-xl">
-												{leave.team_member.emoji}
-											</span>
-											<span className="text-slate-300">
-												{leave.team_member.name}
-											</span>
-										</div>
-									))}
+									{othersOnLeave.map((leave) => {
+										const leaveTypeLabel =
+											leave.leave_type === "full_day"
+												? "Full Day"
+												: leave.leave_type === "half_day_morning"
+													? "Half Day - Morning"
+													: "Half Day - Afternoon";
+										return (
+											<div
+												key={leave.id}
+												className="flex items-center gap-3 p-2 rounded-md bg-slate-700/30"
+											>
+												<span className="text-xl">
+													{leave.team_member.emoji}
+												</span>
+												<span className="text-slate-300">
+													{leave.team_member.name}
+												</span>
+												<span className="text-xs text-slate-400 ml-auto">
+													{leaveTypeLabel}
+												</span>
+											</div>
+										);
+									})}
 								</div>
 							) : (
 								<p className="text-sm text-slate-500 italic p-2">
