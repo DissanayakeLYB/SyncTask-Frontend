@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Trash2, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { Trash2, Pencil, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 import { DatePicker } from "@/components/date-picker";
@@ -8,6 +8,8 @@ import {
 	getTeamMembers,
 	createTask as createTaskDb,
 	updateTaskStatus as updateTaskStatusDb,
+	updateTask as updateTaskDb,
+	updateTaskAssignees as updateTaskAssigneesDb,
 	deleteTask as deleteTaskDb,
 	subscribeToTasks,
 } from "@/lib/database";
@@ -21,7 +23,7 @@ type singleTaskLevel = TaskStatus;
 
 interface ModalState {
 	isOpen: boolean;
-	type: "delete" | "move" | null;
+	type: "delete" | "move" | "edit" | null;
 	task: TaskWithAssignees | null;
 	newLevel?: singleTaskLevel;
 }
@@ -49,6 +51,9 @@ export default function KanbanBoard({
 		type: null,
 		task: null,
 	});
+	const [editTitle, setEditTitle] = useState("");
+	const [editDeadline, setEditDeadline] = useState("");
+	const [editMemberIds, setEditMemberIds] = useState<string[]>([]);
 
 	const loadData = useCallback(async () => {
 		setIsLoading(true);
@@ -147,6 +152,17 @@ export default function KanbanBoard({
 		});
 	}
 
+	function openEditModal(task: TaskWithAssignees) {
+		setEditTitle(task.title);
+		setEditDeadline(task.deadline ?? "");
+		setEditMemberIds(task.assignees.map((a) => a.id));
+		setModalState({
+			isOpen: true,
+			type: "edit",
+			task,
+		});
+	}
+
 	function closeModal() {
 		setModalState({
 			isOpen: false,
@@ -200,11 +216,73 @@ export default function KanbanBoard({
 		closeModal();
 	}
 
+	async function confirmEdit() {
+		if (!modalState.task) return;
+
+		if (!editTitle.trim()) {
+			alert("Task title cannot be empty.");
+			return;
+		}
+		if (!editDeadline) {
+			alert("Please set a deadline for this task.");
+			return;
+		}
+		if (editMemberIds.length === 0) {
+			alert("Please assign at least one person to this task.");
+			return;
+		}
+
+		try {
+			const updatedTask = await updateTaskDb(modalState.task.id, {
+				title: editTitle.trim(),
+				deadline: editDeadline || undefined,
+			});
+
+			if (!updatedTask) {
+				alert("Failed to update task.");
+				return;
+			}
+
+			const assigneesUpdated = await updateTaskAssigneesDb(
+				modalState.task.id,
+				editMemberIds,
+			);
+
+			if (!assigneesUpdated) {
+				alert("Task updated but failed to update assignees.");
+			}
+
+			const updatedAssignees = teamMembers.filter((m) =>
+				editMemberIds.includes(m.id),
+			);
+
+			setTasks((prev) =>
+				prev.map((t) =>
+					t.id === modalState.task!.id
+						? {
+								...t,
+								title: editTitle.trim(),
+								deadline: editDeadline || null,
+								assignees: updatedAssignees,
+							}
+						: t,
+				),
+			);
+		} catch (err) {
+			console.error("Failed to edit task:", err);
+			alert("Failed to update task.");
+		}
+
+		closeModal();
+	}
+
 	function handleConfirm() {
 		if (modalState.type === "delete") {
 			confirmDelete();
 		} else if (modalState.type === "move") {
 			confirmMove();
+		} else if (modalState.type === "edit") {
+			confirmEdit();
 		}
 	}
 
@@ -282,6 +360,13 @@ export default function KanbanBoard({
 							<h4 className="font-semibold">{task.title}</h4>
 							{isAdmin && (
 								<div className="flex gap-2">
+									<button
+										onClick={() => openEditModal(task)}
+										className="cursor-pointer text-blue-400 hover:text-blue-300 transition"
+										title="Edit task"
+									>
+										<Pencil size={16} strokeWidth={2} />
+									</button>
 									<button
 										onClick={() => openDeleteModal(task)}
 										className="cursor-pointer text-red-500 hover:text-red-700 transition"
@@ -478,24 +563,133 @@ export default function KanbanBoard({
 								</p>
 							</>
 						)}
-						<div className="flex gap-3 justify-end">
-							<button
-								onClick={closeModal}
-								className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-md transition"
-							>
-								Cancel
-							</button>
-							<button
-								onClick={handleConfirm}
-								className={`px-4 py-2 rounded-md text-white transition ${
-									modalState.type === "delete"
-										? "bg-red-500 hover:bg-red-600"
-										: "bg-blue-500 hover:bg-blue-600"
-								}`}
-							>
-								Confirm
-							</button>
-						</div>
+						{modalState.type === "edit" && (
+							<>
+								<h3 className="text-xl font-bold mb-4 text-blue-400">
+									Edit Task
+								</h3>
+								<div className="flex flex-col gap-4 mb-6">
+									<div>
+										<label className="block text-sm text-slate-400 mb-1">
+											Title
+										</label>
+										<input
+											type="text"
+											value={editTitle}
+											onChange={(e) =>
+												setEditTitle(e.target.value)
+											}
+											className="border border-slate-600 bg-slate-700 text-white placeholder-slate-400 p-2 w-full rounded-md focus:outline-none focus:border-blue-500"
+										/>
+									</div>
+									<div>
+										<label className="block text-sm text-slate-400 mb-1">
+											Deadline
+										</label>
+										<DatePicker
+											date={
+												editDeadline
+													? parseISO(editDeadline)
+													: undefined
+											}
+											onDateChange={(date) =>
+												setEditDeadline(
+													date
+														? format(
+																date,
+																"yyyy-MM-dd",
+															)
+														: "",
+												)
+											}
+											placeholder="Select deadline"
+											className="w-full"
+										/>
+									</div>
+									<div>
+										<label className="block text-sm text-slate-400 mb-1">
+											Assignees
+										</label>
+										<div className="flex flex-wrap gap-2">
+											{teamMembers.map((member) => {
+												const active =
+													editMemberIds.includes(
+														member.id,
+													);
+												return (
+													<button
+														key={member.id}
+														type="button"
+														onClick={() =>
+															setEditMemberIds(
+																(prev) =>
+																	prev.includes(
+																		member.id,
+																	)
+																		? prev.filter(
+																				(
+																					id,
+																				) =>
+																					id !==
+																					member.id,
+																			)
+																		: [
+																				...prev,
+																				member.id,
+																			],
+															)
+														}
+														className={`px-3 py-1 text-sm rounded-full border transition flex items-center gap-1 ${
+															active
+																? "bg-blue-600 border-blue-500 text-white"
+																: "bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600"
+														}`}
+													>
+														{member.emoji}{" "}
+														{member.first_name}
+													</button>
+												);
+											})}
+										</div>
+									</div>
+								</div>
+							</>
+						)}
+						{modalState.type !== "edit" ? (
+							<div className="flex gap-3 justify-end">
+								<button
+									onClick={closeModal}
+									className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-md transition"
+								>
+									Cancel
+								</button>
+								<button
+									onClick={handleConfirm}
+									className={`px-4 py-2 rounded-md text-white transition ${
+										modalState.type === "delete"
+											? "bg-red-500 hover:bg-red-600"
+											: "bg-blue-500 hover:bg-blue-600"
+									}`}
+								>
+									Confirm
+								</button>
+							</div>
+						) : (
+							<div className="flex gap-3 justify-end">
+								<button
+									onClick={closeModal}
+									className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-md transition"
+								>
+									Cancel
+								</button>
+								<button
+									onClick={handleConfirm}
+									className="px-4 py-2 rounded-md text-white transition bg-blue-500 hover:bg-blue-600"
+								>
+									Save Changes
+								</button>
+							</div>
+						)}
 					</div>
 				</div>
 			)}
