@@ -347,6 +347,11 @@ export default function KanbanBoard({
 		const filteredTasks = getFilteredTasks();
 		return filteredTasks
 			.filter((task) => task.status === level)
+			.sort((a, b) => {
+				if (!a.deadline) return 1;
+				if (!b.deadline) return -1;
+				return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
+			})
 			.map((task) => {
 				const nextLevel = getNextLevel(task.status);
 				const prevLevel = getPreviousLevel(task.status);
